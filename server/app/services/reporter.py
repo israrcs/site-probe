@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import base64
+import html
+import io
+import json
+import zipfile
+from pathlib import Path
+from typing import Dict, List
+
+from PIL import Image
+
+from app.core.models import Issue, Run
+
+SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+SEV_COLOR = {
+    "critical": "#dc2626", "high": "#ea580c", "medium": "#ca8a04",
+    "low": "#2563eb", "info": "#64748b",
+}
+
+
+def write_reports(run: Run, run_dir: Path) -> None:
+    """Write report.json + standalone report.html + site-report.zip."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "report.json").write_text(
+        json.dumps(run.model_dump(), indent=2), encoding="utf-8")
+    _write_html(run, run_dir)
+    _make_zip(run_dir)
+
+
+def _thumb_b64(path: Path, max_w: int = 900, quality: int = 70) -> str:
+    """Downscaled JPEG data-URI so report.html is fully self-contained."""
+    try:
+        img = Image.open(path).convert("RGB")
+        if img.width > max_w:
+            img = img.resize((max_w, max(1, int(img.height * max_w / img.width))))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=quality)
+        return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return ""
+
+
+def _write_html(run: Run, run_dir: Path) -> None:
+    issues = sorted(run.issues,
+                    key=lambda i: (SEV_ORDER.get(i.severity.value, 9), i.page_url))
+    by_page: Dict[str, List[Issue]] = {}
+    for i in issues:
+        by_page.setdefault(i.page_url, []).append(i)
+
+    scores = run.scores or {}
+    cats = scores.get("categories", {})
+    cat_cards = "".join(
+        f'<div class="card"><div class="score">{cats.get(c, 100)}</div>'
+        f'<div class="lbl">{c}</div></div>'
+        for c in ["functional", "console", "network", "a11y", "seo",
+                  "security", "performance"])
+
+    pages_html: List[str] = []
+    for page_url, items in by_page.items():
+        rows = []
+        for i in items:
+            color = SEV_COLOR.get(i.severity.value, "#64748b")
+            shot = ""
+            ann = i.screenshot.get("annotated", "")
+            if ann:
+                thumb = _thumb_b64(run_dir / ann, 700)
+                if thumb:
+                    shot = f'<img src="{thumb}" alt="annotated screenshot"/>'
+            sel = (f'<code class="sel">{html.escape(str(i.selector))}</code>'
+                   if i.selector else "")
+            meta_rows = "".join(
+                f"<tr><td>{html.escape(str(k))}</td>"
+                f"<td>{html.escape(str(v)[:200])}</td></tr>"
+                for k, v in (i.metadata or {}).items())
+            meta = f'<table class="meta">{meta_rows}</table>' if meta_rows else ""
+            rows.append(
+                f'<div class="issue">'
+                f'<div class="head">'
+                f'<span class="sev" style="background:{color}">'
+                f'{i.severity.value}</span>'
+                f'<span class="cat">{i.category.value}</span>'
+                f'{html.escape(i.title)}</div>'
+                f'<p>{html.escape(i.description or "")}</p>'
+                f'<p class="fix"><b>Fix:</b> {html.escape(i.suggestion or "")}</p>'
+                f'{sel}{meta}{shot}</div>')
+        pages_html.append(
+            f"<h2>{html.escape(page_url)}</h2>{''.join(rows)}")
+
+    doc = f"""<!doctype html><html><head><meta charset="utf-8">
+<title>SiteProbe report – {html.escape(run.options.url)}</title>
+<style>
+body{{font-family:system-ui,-apple-system,sans-serif;max-width:1000px;margin:2rem auto;padding:0 1rem;color:#0f172a}}
+.cards{{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}}
+.card{{border:1px solid #e2e8f0;border-radius:8px;padding:.5rem 1rem;text-align:center}}
+.score{{font-size:1.6rem;font-weight:700}}.lbl{{font-size:.7rem;color:#64748b;text-transform:uppercase}}
+.issue{{border:1px solid #e2e8f0;border-left:4px solid #94a3b8;border-radius:8px;padding:.75rem 1rem;margin:.75rem 0}}
+.sev{{color:#fff;border-radius:4px;padding:2px 8px;font-size:.72rem;text-transform:uppercase}}
+.cat{{color:#64748b;font-size:.72rem;text-transform:uppercase;margin:0 8px}}
+img{{max-width:100%;border:1px solid #e2e8f0;border-radius:6px;margin-top:.5rem}}
+code.sel{{display:block;background:#0f172a;color:#7dd3fc;padding:.5rem;border-radius:6px;overflow-x:auto;font-size:.78rem;margin:.5rem 0}}
+table.meta{{font-size:.78rem;color:#475569;border-collapse:collapse}}
+table.meta td{{border-bottom:1px solid #f1f5f9;padding:2px 10px 2px 0;vertical-align:top}}
+h2{{margin-top:2rem;font-size:1.05rem;word-break:break-all}}
+.fix{{color:#166534}}.sum{{color:#475569}}
+</style></head><body>
+<h1>SiteProbe report — {html.escape(run.options.url)}</h1>
+<p class="sum">Run {run.id} · {run.pages_done} page(s) scanned ·
+{len(run.issues)} issue(s) · overall score
+<b>{scores.get('overall', '—')}/100 (grade {scores.get('grade', '—')})</b></p>
+<div class="cards">{cat_cards}</div>
+{''.join(pages_html) or '<p>No issues found 🎉</p>'}
+<p class="sum">Generated by SiteProbe</p></body></html>"""
+    (run_dir / "report.html").write_text(doc, encoding="utf-8")
+
+
+
+def _make_zip(run_dir: Path) -> None:
+    zip_path = run_dir / "site-report.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for p in sorted(run_dir.rglob("*")):
+            if p.is_file() and p != zip_path:
+                zf.write(p, p.relative_to(run_dir))

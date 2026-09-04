@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>SiteProbe Fixture Home</title>
+  <!-- deliberately missing: meta description, viewport meta, lang attr -->
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    .tiny { color: #cccccc; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Fixture Home</h1>
+  <h1>Second H1 (SEO: expected exactly one)</h1>
+
+  <div style="width:3000px;height:10px;background:#eee">overflow box</div>
+
+  <img src="missing-image.png" width="120" alt="Broken file">
+  <img src="logo.png" width="120"> <!-- broken file AND missing alt -->
+  <script>fetch("big.bin").catch(function () {});</script> <!-- perf: heavy page -->
+
+  <p><a href="page2.html">Internal page two</a></p>
+  <p><a href="ghost.html">Link to a missing page</a></p>
+  <p><a href="#nonexistent-fragment">Jump to missing fragment</a></p>
+  <p><a href="javascript:void(0)">JS href</a></p>
+  <p><a href="http://127.0.0.1:1/unreachable">Unreachable external</a></p>
+  <p><a href="#top" id="top">Valid top anchor</a></p>
+
+  <p class="tiny">Low contrast paragraph text.</p>
+  <button></button> <!-- a11y: button has no accessible name -->
+
+  <script>console.error("boom: scripted console error");</script>
+  <script>setTimeout(function () { throw new Error("unhandled page error"); }, 10);</script>
+  <script>fetch("missing-data.json").catch(function () {});</script>
+</body>
+</html>
