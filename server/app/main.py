@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -38,12 +39,27 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 app.include_router(routes_runs.router)
 app.include_router(ws_routes.router)
-app.mount("/artifacts", StaticFiles(directory=str(settings.runs_dir)),
-          name="artifacts")
+
+# Serve scan artifacts (screenshots, reports)
+app.mount(
+    "/artifacts",
+    StaticFiles(directory=str(settings.runs_dir), html=True),
+    name="artifacts",
+)
+
+# Serve the React frontend build (in production / Docker)
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(_static_dir):
+    app.mount(
+        "/",
+        StaticFiles(directory=_static_dir, html=True),
+        name="frontend",
+    )
 
 
 @app.get("/api/health")

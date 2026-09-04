@@ -1,0 +1,13 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+  siteprobe:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server/runs:/app/server/runs
+    environment:
+      - PYTHON_ENV=production
+    restart: unless-stopped

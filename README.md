@@ -117,3 +117,36 @@ cd server
 - Page visits are sequential per run to keep console/network attribution exact.
 - External link checks are capped per page (`link_check_cap`) with a concurrency
   semaphore to stay polite.
+
+## Deployment
+
+### Option A — Vercel (frontend only, with external API backend)
+
+Deploy the React/Vite frontend to Vercel:
+
+```bash
+npx vercel --cwd client
+```
+
+The `vercel.json` at the project root configures:
+- Builds `client/` into a static site
+- Rewrites `/api/*` and `/artifacts/*` to your backend URL
+
+Set your backend URL in `vercel.json` under `rewrites`. Deploy the backend
+separately (see Option B — Docker/Traditional) and point Vercel's rewrites at it.
+
+### Option B — Docker (full stack, single container)
+
+```bash
+docker-compose up --build
+# serves both frontend and API on http://localhost:8000
+```
+
+Or build manually:
+```bash
+docker build -t siteprobe .
+docker run -p 8000:8000 siteprobe
+```
+
+The frontend is built into the Docker image and served by FastAPI's static
+file handler at `/`.
