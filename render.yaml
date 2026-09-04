@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: siteprobe-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt && playwright install chromium
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SITEPROBE_RUNS_DIR
+        value: /opt/render/project/src/server/runs
+    healthCheckPath: /api/health
+    autoDeploy: true

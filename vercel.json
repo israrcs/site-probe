@@ -1,18 +1,19 @@
 {
-  "version": 3,
-  "builds": [
-    {
-      "src": "client/index.html",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "client/dist",
-        "buildCommand": "cd client && npm install && npm run build"
-      }
-    }
-  ],
+  "version": 2,
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://api.your-backend.com/api/$1" },
-    { "source": "/artifacts/(.*)", "destination": "https://api.your-backend.com/artifacts/$1" },
-    { "source": "/ws/(.*)", "destination": "ws://api.your-backend.com/ws/$1" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/artifacts/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
+    }
   ]
 }

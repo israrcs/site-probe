@@ -1,10 +1,12 @@
 import axios from 'axios'
 import type { Run, RunOptions, RunSummary } from '../types'
 
-export const api = axios.create({ baseURL: '/api' })
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
+export const api = axios.create({ baseURL: API_BASE })
 
 export const artifactUrl = (runId: string, rel: string) =>
-  `/artifacts/${runId}/${rel}`
+  `${API_BASE}/artifacts/${runId}/${rel}`
 
 export const startRun = (opts: RunOptions) =>
   api.post<{ id: string; status: string }>('/runs', opts).then((r) => r.data)

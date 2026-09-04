@@ -11,10 +11,16 @@ export function useRunProgress(runId: string, onFinal?: () => void) {
   finalCb.current = onFinal
 
   useEffect(() => {
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    const API_BASE = import.meta.env.VITE_API_URL
     let ws: WebSocket | null = null
     try {
-      ws = new WebSocket(`${proto}://${window.location.host}/ws/${runId}`)
+      if (API_BASE) {
+        const wsUrl = API_BASE.replace(/^http/, 'ws')
+        ws = new WebSocket(`${wsUrl}/ws/${runId}`)
+      } else {
+        const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+        ws = new WebSocket(`${proto}://${window.location.host}/ws/${runId}`)
+      }
     } catch {
       return
     }

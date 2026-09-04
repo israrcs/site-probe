@@ -1,0 +1,5 @@
+server/runs/
+**/*.log
+**/.DS_Store
+**/*.md
+README.md
