@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from contextlib import asynccontextmanager
 
 # Make the server directory importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server"))
@@ -22,37 +21,35 @@ logging.basicConfig(
 )
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Seed realistic demo data so the dashboard feels alive on first load."""
-    try:
-        seed_demo_data()
-        logging.getLogger("siteprobe.seed").info(
-            "seeded demo runs into the in-memory store")
-    except Exception as exc:  # noqa: BLE001 — never block startup on seeding
-        logging.getLogger("siteprobe.seed").warning(
-            "demo seeding failed: %s", exc)
-    yield
+# Vercel Functions don't support lifespan hooks reliably; seed at import time
+try:
+    seed_demo_data()
+    logging.getLogger("siteprobe.seed").info(
+        "seeded demo runs into the in-memory store")
+except Exception as exc:  # noqa: BLE001
+    logging.getLogger("siteprobe.seed").warning(
+        "demo seeding failed: %s", exc)
 
 
-app = FastAPI(title="SiteProbe API", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="SiteProbe API", version="0.3.0")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_credentials=True,
 )
 
 app.include_router(routes_runs.router)
 
-# Serve scan artifacts (screenshots, reports)
-app.mount(
-    "/artifacts",
-    StaticFiles(directory=str(settings.runs_dir), html=True),
-    name="artifacts",
-)
+# Serve scan artifacts (screenshots, reports) if the directory exists
+_runs_dir = str(settings.runs_dir)
+if os.path.isdir(_runs_dir):
+    app.mount(
+        "/artifacts",
+        StaticFiles(directory=_runs_dir, html=True),
+        name="artifacts",
+    )
 
 
 @app.get("/api/health")

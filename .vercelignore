@@ -1,5 +1,7 @@
 server/runs/
+client/node_modules/
+client/dist/
+node_modules/
 **/*.log
 **/.DS_Store
-**/*.md
-README.md
+.git/
