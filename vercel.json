@@ -3,13 +3,14 @@
   "buildCommand": "cd client && npm install && npm run build",
   "outputDirectory": "client/dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/artifacts/(.*)", "destination": "/api/index.py" },
-    { "source": "/(.*)", "destination": "/client/dist/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
     }
-  }
+  ]
 }
