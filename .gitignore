@@ -14,3 +14,5 @@ server/runs/
 # misc
 .DS_Store
 *.log
+.vercel
+.env*
