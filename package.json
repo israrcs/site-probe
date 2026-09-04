@@ -1,0 +1,12 @@
+{
+  "name": "siteprobe-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "cd client && npm install && npm run build",
+    "dev": "cd client && npm run dev"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
