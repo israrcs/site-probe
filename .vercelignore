@@ -1,7 +1,20 @@
+# Exclude scan artifacts and the full scan engine (Docker-only)
 server/runs/
+server/app/services/runner.py
+server/app/services/browser.py
+server/app/services/engines/
+server/app/services/crawler.py
+
+# Exclude the server requirements that include Playwright
+server/requirements.txt
+
+# Node artifacts
 client/node_modules/
 client/dist/
 node_modules/
+
+# Misc
 **/*.log
 **/.DS_Store
 .git/
+
