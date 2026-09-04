@@ -1,7 +1,10 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { useTheme } from './ThemeProvider'
+import ThemeToggle from './ThemeToggle'
 
 export default function Layout() {
   const { pathname } = useLocation()
+  const { theme, toggleTheme } = useTheme()
   const isActive = (p: string) =>
     p === '/' ? pathname === '/' : pathname.startsWith(p)
   return (
@@ -39,6 +42,7 @@ export default function Layout() {
               History
             </Link>
           </nav>
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
